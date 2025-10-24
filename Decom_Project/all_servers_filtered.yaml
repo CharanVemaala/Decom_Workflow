@@ -1,0 +1,50 @@
+- Host Name: pc1ubacxcdi13
+  Name: pc1ubacxcdi13
+  ipAddress: 10.210.36.218
+  dns: pc1ubacxcdi13.bacx.global
+  dnsName: pc1ubacxcdi13.bacx.global
+  classCode: device
+  macAddress: 6c:92:cf:4d:01:60
+  deviceType: Linux
+  serialNumber: JGM7L84
+  status: UP
+  osName: Red Hat Enterprise Linux release 9.5 (Plow)
+  make: Dell Inc.
+  model: PowerEdge R760
+  manufacturer: N/A
+  osArchitecture: x86_64-bit
+  agentInstalled: true
+  agentInstalledTime: 2025-05-14T18:24:53+0000
+  agentVersion: 18.0.0-1
+  type: DEVICE
+  delete: N/A
+  accountNumber: N/A
+  accountName: N/A
+  instanceId: N/A
+  Client Name: BACX (BOFA - Bank of America)
+  Client ID: 630319
+  Client UniqueID: client_630319
+  Location: Lewisville (LET01)
+  Physical: false
+  Server Type: Unknown
+  Tags:
+    '0301: Monitoring Notes': RITM4215724
+    0604:Auditable (SOC2): Y
+    0000:Client Code: BACX
+    0003:Epsilon Portfolio: Financial Services
+    0004:SubPractice: CRM
+    0050:InfraMgmt: STS
+    0035:Contact DL - 411 DL: 411-MT-DB-Bank_of_America@Epsilon.com
+    0602:Auditable (HIPAA): N
+    0005:Platform Owner: abhishek.rajendran@epsilon.com;Kristi.Hess@epsilon.com
+    '0026:Executive Contact #2': kevin.mcgrath@epsilon.com
+    0030:Contact DL - Biz DL: Bofa_Systems@epsilon.com
+    0010:Business Approver: Neeraj.Aggarwal@epsilon.com;Kristi.Hess@epsilon.com
+    0006:Asset Owner: abhishek.rajendran@epsilon.com;Kristi.Hess@epsilon.com
+    0007:Risk Owner: abhishek.rajendran@epsilon.com;Kristi.Hess@epsilon.com
+    '0025:Executive Contact #1': neeraj.aggarwal@epsilon.com; Marie.Kilroy@epsilon.com
+    0036:Contact DL - 911 DL: 911-MT-DB-Bank_of_America@Epsilon.com
+    0605:Auditable (Privacy): Y2
+    0002:Epsilon Practice: Technology
+    0600:Auditable (PCI): N
+    0610:Domestic Restriction: US Only
