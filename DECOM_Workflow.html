@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interactive Decom Workflow</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #0b1220;
+      --accent: #06b6d4;
+      --muted: #94a3b8;
+      --ok: #10b981;
+      --done: #16a34a33;
+      --danger: #ef4444;
+      --glass: rgba(255,255,255,0.03);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: linear-gradient(180deg,#071022 0%, #0b1724 100%);
+      color: #e6eef6;
+      scroll-behavior: smooth;
+    }
+    .wrap { max-width: 1100px; margin: 28px auto; padding: 20px; }
+    header { display: flex; gap: 16px; align-items: center; margin-bottom: 18px; }
+    header h1 { font-size: 20px; margin: 0; }
+    header p { margin: 0; color: var(--muted); font-size: 13px; }
+    .canvas { display: grid; grid-template-columns: 1fr 360px; gap: 16px; }
+    .diagram { background: var(--card); padding: 18px; border-radius: 12px; box-shadow: 0 6px 18px rgba(2,6,23,0.6); max-height: 80vh; overflow-y: auto; }
+    .grid { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .row { display: flex; gap: 16px; align-items: center; justify-content: center; }
+    .shape {
+      min-width: 160px; padding: 14px 12px; border-radius: 8px;
+      background: var(--glass); border: 1px solid rgba(255,255,255,0.04);
+      text-align: center; cursor: pointer; user-select: none;
+      transition: background 0.3s, border 0.3s;
+    }
+    .diamond { width: 160px; height: 70px; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; }
+    .diamond .inner { transform: rotate(-45deg); width: 100%; }
+    .shape .title { font-weight: 600; }
+    .shape .subtitle { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .shape.active { box-shadow: 0 8px 30px rgba(6,182,212,0.12); border-color: rgba(6,182,212,0.18); }
+    .shape.done { background: var(--done); border-color: var(--ok); }
+    .connector { width: 100%; height: 32px; }
+    .details {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); max-height: 80vh; overflow-y: auto;
+    }
+    .details h3 { margin: 0 0 8px 0; }
+    .meta { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    .details .block { background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+    .btn { display: inline-block; padding: 8px 12px; border-radius: 8px; background: var(--accent); color: #022; cursor: pointer; font-weight: 600; border: none; }
+    .small { padding: 6px 8px; font-size: 13px; }
+    .outline { background: transparent; border: 1px solid rgba(255,255,255,0.06); color: var(--muted); }
+    .flow-controls { display: flex; gap: 8px; margin-top: 8px; }
+    .ok { background: var(--ok); color: #022; }
+    .no { background: var(--danger); }
+    footer { color: var(--muted); margin-top: 14px; font-size: 13px; }
+    @media (max-width: 880px) { .canvas { grid-template-columns: 1fr; } .details { order: 2; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Decommission Automation Workflow</h1>
+        <p>Click shapes to reveal details. Completing a step highlights progress automatically.</p>
+      </div>
+    </header>
+
+    <div class="canvas">
+      <div class="diagram" id="diagram">
+        <div class="grid" id="flowGrid"></div>
+      </div>
+
+      <aside class="details" id="detailsPanel">
+        <h3 id="panel-title">Click a step</h3>
+        <div class="meta">Selected step details appear here.</div>
+        <div class="block" id="content-area">
+          <p style="margin:0;color:var(--muted)">No step selected. Try clicking <strong>Decom Request</strong>.</p>
+        </div>
+        <div class="flow-controls" id="controls" style="display:none;"></div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button id="reset" class="btn outline small">Reset</button>
+        </div>
+        <footer>Auto-progress enabled: each completion moves to the next step.</footer>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const STEPS = [
+      { id: "decom", title: "Decom Request", subtitle: "Initiate decommission", content: "Request starts workflow.", next: "setci" },
+      { id: "setci", title: "SetCI", subtitle: "Collect info from OpsRamp", content: "Collect general info from OpsRamp and update ticket.", next: "approval" },
+      { id: "approval", title: "Business Approver", subtitle: "Approve or Reject", content: "Business decision. If approved, continue. If rejected, workflow cancelled.", nextApprove: "unmanage", nextReject: "cancelled" },
+      { id: "unmanage", title: "Unmanage Server", subtitle: "OpsRamp Action", content: "Unmanage server in OpsRamp.", next: "lldp" },
+      { id: "lldp", title: "Fetch LLDP", subtitle: "Network Info", content: "Fetch network connectivity details.", next: "san" },
+      { id: "san", title: "Detach SAN/NAS", subtitle: "Storage cleanup", content: "Detach SAN/NAS from server.", next: "poweroff" },
+      { id: "poweroff", title: "Server Power Off", subtitle: "Via Change", content: "Perform power-off via approved change.", next: "hardware" },
+      { id: "hardware", title: "Attach Hardware Removal Form", subtitle: "Form update", content: "Attach hardware removal form in SNOW.", next: "dns" },
+      { id: "dns", title: "Fetch DNS/BIND Info", subtitle: "DNS cleanup", content: "Fetch DNS/BIND details for cleanup.", next: "illmt" },
+      { id: "illmt", title: "ILLMT/OSSEC Validation", subtitle: "Compliance", content: "Validate compliance and licensing.", next: "techverify" },
+      { id: "techverify", title: "Tech Verification", subtitle: "Final check", content: "Final verification by tech team.", next: "completed" },
+      { id: "cancelled", title: "Cancelled", subtitle: "Workflow stopped", content: "Business rejection or failure. Workflow ends.", next: null },
+      { id: "completed", title: "Decom Completed", subtitle: "All done", content: "Workflow completed successfully.", next: null }
+    ];
+
+    const grid = document.getElementById("flowGrid");
+    const title = document.querySelector('#panel-title');
+    const content = document.querySelector('#content-area');
+    const controls = document.querySelector('#controls');
+    const detailsPanel = document.getElementById('detailsPanel');
+    let current = null;
+
+    // Build the diagram
+    STEPS.forEach(step => {
+      const row = document.createElement("div");
+      row.className = "row";
+
+      if(step.id === "approval"){
+        // Decision node
+        const diamond = document.createElement("div");
+        diamond.className = "shape diamond";
+        diamond.id = step.id;
+        diamond.dataset.step = step.id;
+        diamond.innerHTML = `<div class="inner"><div class="title">${step.title}</div><div class="subtitle">${step.subtitle}</div></div>`;
+        row.appendChild(diamond);
+      } else if(step.id === "unmanage" || step.id === "cancelled"){
+        // These will be rendered after approval
+        const shape = document.createElement("div");
+        shape.className = "shape rect";
+        shape.id = step.id;
+        shape.dataset.step = step.id;
+        shape.innerHTML = `<div class="title">${step.title}</div><div class="subtitle">${step.subtitle}</div>`;
+        row.appendChild(shape);
+      } else {
+        const shape = document.createElement("div");
+        shape.className = "shape rect";
+        shape.id = step.id;
+        shape.dataset.step = step.id;
+        shape.innerHTML = `<div class="title">${step.title}</div><div class="subtitle">${step.subtitle}</div>`;
+        row.appendChild(shape);
+      }
+
+      grid.appendChild(row);
+    });
+
+    function selectStep(id){
+      current = id;
+      document.querySelectorAll('.shape').forEach(s => s.classList.toggle('active', s.dataset.step === id));
+      const step = STEPS.find(s => s.id === id);
+      if(!step) return;
+      title.textContent = step.title;
+      content.innerHTML = `<p>${step.content}</p>`;
+      updateControls(step);
+
+      // Scroll diagram to active
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Scroll details panel to top
+      detailsPanel.scrollTop = 0;
+    }
+
+    function updateControls(step){
+      controls.innerHTML = '';
+      controls.style.display = 'flex';
+
+      if(step.id === 'approval'){
+        addButton('Approve', 'ok', () => completeStep('approval','unmanage'));
+        addButton('Reject', 'no', () => completeStep('approval','cancelled'));
+      } else if(step.next){
+        addButton('Completed','ok', () => completeStep(step.id, step.next));
+      } else {
+        controls.style.display = 'none';
+      }
+    }
+
+    function addButton(label,cls,fn){
+      const btn = document.createElement('button');
+      btn.className = `btn small ${cls}`;
+      btn.textContent = label;
+      btn.onclick = fn;
+      controls.appendChild(btn);
+    }
+
+    function completeStep(currentId,nextId){
+      document.getElementById(currentId)?.classList.add('done');
+      if(nextId){
+        selectStep(nextId);
+      } else resetFlow();
+    }
+
+    function resetFlow(){
+      document.querySelectorAll('.shape').forEach(s => s.classList.remove('active','done'));
+      title.textContent = 'Click a step';
+      content.innerHTML = '<p style="margin:0;color:var(--muted)">No step selected. Try clicking <strong>Decom Request</strong>.</p>';
+      controls.style.display = 'none';
+    }
+
+    document.querySelectorAll('.shape').forEach(s => {
+      s.onclick = () => selectStep(s.dataset.step);
+    });
+    document.getElementById('reset').onclick = resetFlow;
+  </script>
+</body>
+</html>
